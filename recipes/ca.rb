@@ -4,7 +4,7 @@ kube_csr = "#{kube_intermediate_ca_dir}/csr"
 kube_certs = "#{kube_intermediate_ca_dir}/certs"
 kube_newcerts = "#{kube_intermediate_ca_dir}/newcerts"
 kube_hopsworkscerts = "#{kube_intermediate_ca_dir}/hopsworks"
-kube_hopsmondir = "#{kube_intermediate_ca_dir}/prometheus"
+kube_hopsmondir = "#{kube_intermediate_ca_dir}/hopsmon"
 
 # If the user has redefined the the Hopsworks user
 # then overwrite the ca_api_user and ca_api_group
@@ -178,7 +178,7 @@ bash 'generate-and-sign-key' do
   cwd kube_hopsmondir
   code <<-EOH
     set -e
-    openssl genrsa -passout pass:#{node['kube-hops']['hopsworks_cert_pwd']} -out hopsmon.key.pem#{node['kube-hops']['pki']['keysize']}
+    openssl genrsa -passout pass:#{node['kube-hops']['hopsworks_cert_pwd']} -out hopsmon.key.pem #{node['kube-hops']['pki']['keysize']}
     openssl req -subj "/CN=hopsmon" -passin pass:#{node['kube-hops']['hopsworks_cert_pwd']} -passout pass:#{node['kube-hops']['hopsworks_cert_pwd']} -key hopsmon.key.pem -new -sha256 -out hopsmon.csr.pem
     openssl ca -batch -config ../kube-ca.cnf -passin pass:#{node['kube-hops']['pki']['ca_keypw']} -extensions v3_ext -days 365 -notext -md sha256 -in hopsmon.csr.pem -out hopsmon.cert.pem
   EOH
