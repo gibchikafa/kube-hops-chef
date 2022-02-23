@@ -5,10 +5,22 @@ template "#{node['kube-hops']['conf_dir']}/hopsworks-rbac.yaml" do
   group node['kube-hops']['group']
 end
 
+template "#{node['kube-hops']['conf_dir']}/hopsmon-rbac.yaml" do
+  source "hopsworks-rbac.yml.erb"
+  owner node['kube-hops']['user']
+  group node['kube-hops']['group']
+end
+
 kube_hops_kubectl 'apply_hopsworks_rbac' do
   user node['kube-hops']['user']
   group node['kube-hops']['group']
   url "#{node['kube-hops']['conf_dir']}/hopsworks-rbac.yaml"
+end
+
+kube_hops_kubectl 'apply_hopsmon_rbac' do
+  user node['kube-hops']['user']
+  group node['kube-hops']['group']
+  url "#{node['kube-hops']['conf_dir']}/hopsmon-rbac.yaml"
 end
 
 # TODO (Fabio) : authentication and deploy default images
