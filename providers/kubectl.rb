@@ -31,3 +31,14 @@ action :label do
     EOH
   end
 end
+
+action :config do
+  bash "apply-config" do
+    user new_resource.user
+    group new_resource.group
+    environment ({ 'HOME' => ::Dir.home(new_resource.user) })
+    code <<-EOH
+      kubectl config set-credentials #{node['hopsmonitor']['user']} --client-certificate=#{x509_helper.get_crypto_dir(node['hopsmonitor']['user'])}/#{node['hopsmonitor']['kube_certs_dir']}/hopsmon.cert.pem --client-key=#{x509_helper.get_crypto_dir(node['hopsmonitor']['user'])}/#{node['hopsmonitor']['kube_certs_dir']}/hopsmon.key.pem
+    EOH
+  end
+end

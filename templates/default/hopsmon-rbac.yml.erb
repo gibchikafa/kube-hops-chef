@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hopsmon-rbac
+rules:
+  - apiGroups: [""]
+    #
+    # at the HTTP level, the name of the resource for accessing Secret
+    # objects is "secrets"
+    resources: ["nodes/metrics", "nodes", "pods", "endpoints", "services", "namespaces", "nodes/proxy"]
+    verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+# This cluster role binding allows anyone in the "manager" group to read secrets in any namespace.
+kind: ClusterRoleBinding
+metadata:
+  name: hopsmon-rbac
+subjects:
+  - kind: User
+    name: <%= node['hopsmonitor']['user'] %>
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: hopsmon-rbac
+  apiGroup: rbac.authorization.k8s.io
