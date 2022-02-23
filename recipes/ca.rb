@@ -4,7 +4,8 @@ kube_csr = "#{kube_intermediate_ca_dir}/csr"
 kube_certs = "#{kube_intermediate_ca_dir}/certs"
 kube_newcerts = "#{kube_intermediate_ca_dir}/newcerts"
 kube_hopsworkscerts = "#{kube_intermediate_ca_dir}/hopsworks"
-kube_hopsmondir = "#{kube_intermediate_ca_dir}/hopsmon"
+hopsmon_crypto_dir = x509_helper.get_crypto_dir(node['hopsmonitor']['user'])
+hopsmon_kube_certs_dir = "#{hopsmon_crypto_dir}/#{node['hopsmonitor']['kube_certs_dir']}"
 
 # If the user has redefined the the Hopsworks user
 # then overwrite the ca_api_user and ca_api_group
@@ -166,21 +167,25 @@ bash 'generate-key/trustStore' do
   not_if { ::File.exist?("#{kube_hopsworkscerts}/hopsworks__kstore.jks") }
 end
 
-# Generate and sign hopsmon certificates
-directory kube_hopsmondir do
-  user  node['kube-hops']['pki']['ca_api_user']
-  group node['kube-hops']['pki']['ca_api_group']
+# Generate and sign hopsmon certificates for kubernetes
+directory hopsmon_kube_certs_dir do
+  user  node["kagent"]["certs_user"]
+  group node["kagent"]["certs_user"]
+  mode "750"
 end
 
 bash 'generate-and-sign-key' do
   user "root"
   group "root"
-  cwd kube_hopsmondir
+  cwd hopsmon_kube_certs_dir
   code <<-EOH
     set -e
+    setfacl -m u:#{node['hopsmonitor']['user']}:r #{hopsmon_crypto_dir}
     openssl genrsa -passout pass:#{node['kube-hops']['hopsworks_cert_pwd']} -out hopsmon.key.pem #{node['kube-hops']['pki']['keysize']}
     openssl req -subj "/CN=hopsmon" -passin pass:#{node['kube-hops']['hopsworks_cert_pwd']} -passout pass:#{node['kube-hops']['hopsworks_cert_pwd']} -key hopsmon.key.pem -new -sha256 -out hopsmon.csr.pem
     openssl ca -batch -config ../kube-ca.cnf -passin pass:#{node['kube-hops']['pki']['ca_keypw']} -extensions v3_ext -days 365 -notext -md sha256 -in hopsmon.csr.pem -out hopsmon.cert.pem
+    chown #{node["kagent"]["certs_user"]}:#{node["kagent"]["certs_user"]} *
+    setfacl -m u:#{node['hopsmonitor']['user']}:r *
   EOH
   not_if { ::File.exist?("#{kube_hopsmondir}/hopsmon.cert.pem") }
 end
