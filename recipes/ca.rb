@@ -4,6 +4,7 @@ kube_csr = "#{kube_intermediate_ca_dir}/csr"
 kube_certs = "#{kube_intermediate_ca_dir}/certs"
 kube_newcerts = "#{kube_intermediate_ca_dir}/newcerts"
 kube_hopsworkscerts = "#{kube_intermediate_ca_dir}/hopsworks"
+#hopsmon
 hopsmon_crypto_dir = x509_helper.get_crypto_dir(node['hopsmonitor']['user'])
 hopsmon_kube_certs_dir = "#{hopsmon_crypto_dir}/#{node['hopsmonitor']['kube_certs_dir']}"
 
