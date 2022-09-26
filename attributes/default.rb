@@ -121,8 +121,8 @@ default['kube-hops']['hops-system']['base_dir']            = node['kube-hops']['
 # Model serving admission controller
 
 default['kube-hops']['model-serving-webhook']['base_dir']  = node['kube-hops']['hops-system']['base_dir'] + "/model-serving-webhook"
-default['kube-hops']['model-serving-webhook']['image']     = "model-serving-webhook:#{node['kube-hops']['docker_img_version']}"
-default['kube-hops']['storage-initializer']['image']       = "storage-initializer:#{node['kube-hops']['docker_img_version']}"
+default['kube-hops']['model-serving-webhook']['image']     = "model-serving-webhook:latest"
+default['kube-hops']['storage-initializer']['image']       = "storage-initializer:latest"
 
 # Model serving deployment configuration
 

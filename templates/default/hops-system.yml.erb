@@ -50,7 +50,7 @@ metadata:
 data:
   storageInitializer: |-
     {
-        "image": "<%= node['kube-hops']['docker_img_reg_url'] %>/<%= node['kube-hops']['storage-initializer']['image'] %>",
+        "image": "gchikafa/<%= node['kube-hops']['storage-initializer']['image'] %>",
         "cpuRequest": "100m",
         "cpuLimit": "1",
         "memoryRequest": "100Mi",
