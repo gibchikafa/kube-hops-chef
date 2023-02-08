@@ -59,26 +59,18 @@ data:
            fallthrough
         }
         ready
-        kubernetes cluster.local {
-           pods verified
-           upstream
-           fallthrough
+        kubernetes CLUSTER_DOMAIN REVERSE_CIDRS {
+          fallthrough in-addr.arpa ip6.arpa
         }
         prometheus :9153
-        forward . <%= @fallback_dns %>
+        forward . UPSTREAMNAMESERVER {
+          max_concurrent 1000
+        }
         cache 30
         loop
         reload
         loadbalance
-    }
-    <%= node['consul']['domain'] %>:53 {
-      errors
-      cache 30
-      forward . /etc/resolv.conf
-    }
-    in-addr.arpa ip6.arpa { 
-      forward . <%= @fallback_dns %>
-    }
+    }STUBDOMAINS
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -215,7 +207,8 @@ metadata:
 spec:
   selector:
     k8s-app: kube-dns
-  clusterIP: <%= node['kube-hops']['dns_ip'] %>
+    app.kubernetes.io/name: coredns
+  clusterIP: CLUSTER_DNS_IP
   ports:
   - name: dns
     port: 53
