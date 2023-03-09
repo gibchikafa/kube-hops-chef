@@ -63,6 +63,18 @@ bash "tag_and_push" do
     EOH
 end
 
+# ubuntu22.04 filebeat image
+bash "ubuntu22.04_filebeat image" do
+  user "root"
+  code <<-EOH
+      set -e
+      wget https://repo.hops.works/dev/gibson/filebeat.tar
+      docker load -i filebeat.tar
+      docker tag docker.hops.works/filebeat:3.2.0-SNAPSHOT #{registry_host}:#{node['hops']['docker']['registry']['port']}/filebeat:3.2.0-SNAPSHOT
+      docker push #{registry_host}:#{node['hops']['docker']['registry']['port']}/filebeat:3.2.0-SNAPSHOT
+  EOH
+end
+
 if node['kube-hops']['docker_img_reg_url'].eql?("")
   node.override['kube-hops']['docker_img_reg_url'] = registry_host + ":#{node['hops']['docker']['registry']['port']}"
 end
