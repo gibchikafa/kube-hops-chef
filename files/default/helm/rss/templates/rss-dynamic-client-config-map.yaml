@@ -1,0 +1,15 @@
+---
+# Source: hopsworks/charts/spark/templates/rss-dynamic-client-config-map.yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rss-dynamic-client-configuration
+  namespace: hopsworks
+data:
+  dynamic_client.conf: |-
+    rss.storage.type MEMORY_LOCALFILE
+    rss.writer.require.memory.retryMax 1200
+    rss.client.retry.max 100
+    rss.writer.send.check.timeout 600000
+    rss.client.read.buffer.size 14m
+    rss.client.retry.interval.max 1000

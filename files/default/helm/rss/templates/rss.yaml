@@ -1,0 +1,301 @@
+---
+# Source: hopsworks/charts/spark/templates/rss.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rss-webhook
+  namespace: hopsworks
+---
+# Source: hopsworks/charts/spark/templates/rss.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rss-controller
+  namespace: hopsworks
+---
+# Source: hopsworks/charts/spark/templates/rss.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: rss-webhook-role
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "pods" ]
+    verbs: [ "get", "list", "watch", "delete", "update", "patch" ]
+  - apiGroups: [ "node.k8s.io" ]
+    resources: [ "runtimeclasses" ]
+    verbs: [ "get", "list", "watch" ]
+  - apiGroups: [ "uniffle.apache.org" ]
+    resources: [ "remoteshuffleservices", "remoteshuffleservices/status" ]
+    verbs: [ "create", "get", "list", "watch", "update", "delete", "patch" ]
+  - apiGroups: [ "admissionregistration.k8s.io" ]
+    resources: [ "validatingwebhookconfigurations", "mutatingwebhookconfigurations" ]
+    verbs: [ "get", "list", "watch", "update", "create", "delete" ]
+  - apiGroups: [ "" ]
+    resources: [ "configmaps", "secrets" ]
+    verbs: [ "get", "list", "watch", "update", "create", "delete" ]
+  - apiGroups: [ "coordination.k8s.io" ]
+    resources: [ "leases" ]
+    verbs: [ "get", "list", "watch", "update", "create", "delete" ]
+  - apiGroups: [ "" ]
+    resources: [ "events" ]
+    verbs: [ "list", "watch", "create", "update", "patch" ]
+  - apiGroups: [ "node.k8s.io" ]
+    resources: [ "runtimeclasses" ]
+    verbs: [ "get", "list", "watch" ]
+  - apiGroups: [ "autoscaling" ]
+    resources: [ "horizontalpodautoscalers" ]
+    verbs: [ "get", "list", "watch" ]
+  - apiGroups: [ "apps" ]
+    resources: [ "statefulsets" ]
+    verbs: [ "create", "get", "list", "watch" ]
+---
+# Source: hopsworks/charts/spark/templates/rss.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: rss-controller-role
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "pods" ]
+    verbs: [ "get", "list", "watch", "delete" ]
+  - apiGroups: [ "uniffle.apache.org" ]
+    resources: [ "remoteshuffleservices", "remoteshuffleservices/status" ]
+    verbs: [ "get", "list", "watch", "update" ]
+  - apiGroups: [ "admissionregistration.k8s.io" ]
+    resources: [ "validatingwebhookconfigurations", "mutatingwebhookconfigurations" ]
+    verbs: [ "get", "list", "watch", "update", "create", "delete" ]
+  - apiGroups: [ "" ]
+    resources: [ "configmaps", "secrets", "services", "serviceaccounts" ]
+    verbs: [ "get", "list", "watch", "update", "create", "delete", "patch" ]
+  - apiGroups: [ "apps" ]
+    resources: [ "deployments", "statefulsets" ]
+    verbs: [ "get", "list", "watch", "update", "create", "delete", "patch" ]
+  - apiGroups: [ "coordination.k8s.io" ]
+    resources: [ "leases" ]
+    verbs: [ "get", "list", "watch", "update", "create", "delete" ]
+  - apiGroups: [ "" ]
+    resources: [ "events" ]
+    verbs: [ "list", "watch", "create", "update", "patch" ]
+  - apiGroups: [ "autoscaling" ]
+    resources: [ "horizontalpodautoscalers" ]
+    verbs: [ "get", "list", "watch", "update", "create", "delete", "patch" ]
+---
+# Source: hopsworks/charts/spark/templates/rss.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: rss-webhook-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: rss-webhook
+    namespace: hopsworks
+roleRef:
+  kind: ClusterRole
+  name: rss-webhook-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: hopsworks/charts/spark/templates/rss.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: rss-controller-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: rss-controller
+    namespace: hopsworks
+roleRef:
+  kind: ClusterRole
+  name: rss-controller-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: hopsworks/charts/spark/templates/rss.yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: rss-webhook
+  namespace: hopsworks
+spec:
+  type: NodePort
+  selector:
+    service: rss-webhook
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 9876
+      nodePort: 31777
+---
+# Source: hopsworks/charts/spark/templates/rss.yaml
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: rss-webhook
+  namespace: hopsworks
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 2
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: rss-webhook
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: rss-webhook
+        service: rss-webhook
+    spec:      
+      imagePullSecrets:
+        - name: regcred
+      serviceAccountName: rss-webhook
+      containers:
+        - name: rss-webhook
+          image: "docker.hops.works/rss-webhook:0.9.0"
+          command:
+            - "./webhook"
+          args:
+            - "--ignore-rss=false"
+            - "--v=4"
+          ports:
+            - containerPort: 9876
+              protocol: TCP
+          imagePullPolicy: "Always"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - rss-webhook
+              topologyKey: kubernetes.io/hostname
+---
+# Source: hopsworks/charts/spark/templates/rss.yaml
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: rss-controller
+  namespace: hopsworks
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 2
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: rss-controller
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: rss-controller
+    spec:      
+      imagePullSecrets:
+        - name: regcred
+      serviceAccountName: rss-controller
+      initContainers:
+        - name: webhook-dependency-chek
+          image: "docker.hops.works/hops-rss-init:0.9.0"
+          command: ["/bin/sh", "-c", "check_webhook.sh rss-webhook.hopsworks.svc"]
+      containers:
+        - name: rss-controller
+          image: "docker.hops.works/rss-controller:0.9.0"
+          command:
+            - "./controller"
+          args:
+            - "--v=5"
+          ports:
+            - containerPort: 9876
+              protocol: TCP
+          imagePullPolicy: "Always"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1024Mi
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - rss-controller
+              topologyKey: kubernetes.io/hostname
+---
+# Source: hopsworks/charts/spark/templates/rss.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rss-coordinator-and-server
+  namespace: hopsworks
+spec:
+  template:
+    metadata:
+      labels:
+        app: rss-coordinator-and-server
+    spec:      
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: rss
+          imagePullPolicy: Always
+          image: "docker.hops.works/hops-rss-init:0.9.0"
+          command: ["/bin/sh", "-c", "rss.sh rss-webhook.hopsworks.svc"]
+          volumeMounts:
+            - mountPath: /tmp # dont change
+              name: rss-crd
+      restartPolicy: Never
+      volumes:
+        - name: rss-crd
+          configMap:
+            name: rss-crd
+            items:
+              - key: "rss.yaml"
+                path: "rss.yaml"
+      serviceAccountName: rss-webhook
+  backoffLimit: 1

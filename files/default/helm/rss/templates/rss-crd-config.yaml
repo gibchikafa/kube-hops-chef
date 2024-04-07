@@ -1,0 +1,88 @@
+---
+# Source: hopsworks/charts/spark/templates/rss-rcd-config.yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rss-crd
+  namespace: hopsworks
+data:
+  rss.yaml: |
+    apiVersion: uniffle.apache.org/v1alpha1
+    kind: RemoteShuffleService
+    metadata:
+      name: rss-hops
+      namespace: hopsworks
+    spec:
+      # ConfigMapName indicates configMap name stores configurations of coordinators and shuffle servers.
+      configMapName: rss-configuration      
+      imagePullSecrets:
+        - name: regcred
+      # Coordinator represents the relevant configuration of the coordinators.
+      coordinator:
+        labels:
+          role: rss-hops-coordinator
+        image: "docker.hops.works/rss:0.9.0"
+        # Count is the number of coordinator workloads to be generated.
+        # By default, we will deploy two coordinators to ensure active-active.
+        count: 2
+        # RpcNodePort represents the port required by the rpc protocol of the coordinators,
+        # and the range is the same as the port range of the NodePort type service in kubernetes.
+        # By default, we will deploy two coordinators to ensure active-active.
+        rpcNodePort:
+          - 30001
+          - 30011
+            # httpNodePort represents the port required by the http protocol of the coordinators,
+            # and the range is the same as the port range of the NodePort type service in kubernetes.
+          # By default, we will deploy two coordinators to ensure active-active.
+        httpNodePort:
+          - 30002
+          - 30012
+          # XmxSize indicates the xmx size configured for coordinators.
+        xmxSize: "10G"
+        # ConfigDir records the directory where the configuration of coordinators reside.
+        configDir: "/data/rssadmin/rss/conf"
+        # Replicas field is the replicas of each coordinator's deployment.
+        replicas: 1
+        # SecurityContext holds pod-level security attributes and common container settings.
+        securityContext:
+          # RunAsUser specifies the user ID of all processes in coordinator pods.
+          runAsUser: 1000
+          # FsGroup specifies the group ID of the owner of the volume within coordinator pods.
+          fsGroup: 1000
+        # LogHostPath represents the host path used to save logs of coordinators.
+        logHostPath: "/srv/hops/rss"
+        hostPathMounts:
+          /srv/hops/rss: /data/rssadmin/rss/logs
+        volumeMounts:
+          - name: rss-dynamic-client-configuration
+            mountPath: /tmp
+        volumes:
+          - name: rss-dynamic-client-configuration
+            configMap:
+              name: rss-dynamic-client-configuration
+          - name: rss-volume
+            hostPath:
+              path: /srv/hops/rss
+              type: DirectoryOrCreate
+      # shuffleServer represents the relevant configuration of the shuffleServers
+      shuffleServer:
+        # Sync marks whether the shuffle server needs to be updated or restarted.
+        # When the user needs to update the shuffle servers, it needs to be set to true.
+        # After the update is successful, the controller will modify it to false.
+        sync: true
+        # Replicas field is the replicas of each coordinator's deployment.
+        replicas: 3
+        # Image represents the mirror image used by shuffle servers.
+        #imagePullPolicy: "Always"
+        xmxSize: 10G
+        image: "docker.hops.works/rss:0.9.0"
+        configDir: "/data/rssadmin/rss/conf"
+        rpcPort: 19999
+        httpPort: 19998
+        securityContext:
+          runAsUser: 1000
+          fsGroup: 1000
+        upgradeStrategy:
+          type: FullUpgrade
+        hostPathMounts:
+          /srv/hops/rss: /data/rssadmin/rss/logs

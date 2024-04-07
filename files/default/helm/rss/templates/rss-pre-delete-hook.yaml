@@ -1,0 +1,26 @@
+---
+# Source: hopsworks/charts/spark/templates/rss-pre-delete-hook.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rss-delete-job
+  namespace: hopsworks
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-weight: "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded, before-hook-creation
+spec:
+  template:
+    metadata:
+      labels:
+        app: rss-delete-job
+    spec:      
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: rss
+          image: "docker.hops.works/hops-rss-init:0.9.0"
+          command: ["/bin/sh", "-c", "rss_uninstall.sh rss-hops"]
+      serviceAccountName: rss-webhook
+      restartPolicy: Never
+  backoffLimit: 1

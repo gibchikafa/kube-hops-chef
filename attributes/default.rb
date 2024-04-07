@@ -179,3 +179,10 @@ default['kube-hops']['nvidia-device-plugin']['url']                    = node['d
 
 default['kube-hops']['device-manager']['fuse-max-devices']             = 30
 default['kube-hops']['assets_dir']['fuse']                             = node['kube-hops']['hops-system']['base_dir'] + "/fuse"
+
+default['kube-hops']['helm']['version']                                = "3.14.3"
+default['kube-hops']['helm']['base_dir']                               = node['kube-hops']['dir'] + "/helm"
+default['kube-hops']['helm']['install_namespace']                      = "hopsworks"
+default['kube-hops']['rss']['base_dir']                                = node['install']['dir'].empty? ? "/srv" : node['install']['dir']
+default['kube-hops']['rss']['dir']                                     = node['kube-hops']['rss']['base_dir'] + "/rss"
+

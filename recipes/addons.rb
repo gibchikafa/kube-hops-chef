@@ -144,3 +144,93 @@ kube_hops_kubectl 'hopsfsmount_apparmor_profile' do
   url "#{node['kube-hops']['assets_dir']['fuse']}/#{hopsfsmount_apparmor_profile}"
   only_if { apparmor_enabled && node['hops']['docker']['load-hopsfsmount-apparmor-profile'].casecmp?("true")}
 end
+
+# install helm
+helm_version = node['kube-hops']['helm']['version']
+helm_url = "https://get.helm.sh/helm-v#{helm_version}-linux-amd64.tar.gz"
+helm_tar = "#{Chef::Config['file_cache_path']}/helm-v#{helm_version}-linux-amd64.tar.gz"
+
+remote_file helm_tar do
+   source helm_url
+   owner node['kube-hops']['user']
+   group node['kube-hops']['group']
+   mode "0644"
+end
+
+bash "install_helm" do
+  user 'root'
+  group 'root'
+  environment ({ 'HOME' => ::Dir.home(node['kube-hops']['user']) })
+  code <<-EOH
+    tar -zxvf #{helm_tar} -C #{Chef::Config['file_cache_path']}
+    mv #{Chef::Config['file_cache_path']}/linux-amd64/helm /usr/bin/helm
+  EOH
+end
+
+# install spark-operator
+bash "install_spark_operator" do
+  user node['kube-hops']['user']
+  group node['kube-hops']['group']
+  environment ({ 'HOME' => ::Dir.home(node['kube-hops']['user']) })
+  code <<-EOH
+    helm repo add spark-operator https://kubeflow.github.io/spark-operator
+    helm install spark-operator spark-operator/spark-operator --namespace spark-operator --create-namespace --set enableWebhook=true
+  EOH
+end
+
+
+# create the hopsworks namespace
+bash 'create_helm_install_namespace' do
+  user node['kube-hops']['user']
+  group node['kube-hops']['group']
+  environment ({ 'HOME' => ::Dir.home(node['kube-hops']['user']) })
+  retries 6
+  retry_delay 30
+  code <<-EOH
+      kubectl create namespace #{node['kube-hops']['helm']['install_namespace'] }
+    EOH
+  not_if "kubectl get namespaces | grep #{node['kube-hops']['helm']['install_namespace']}", :environment => { 'HOME' => ::Dir.home(node['kube-hops']['user']) }
+end
+
+# create secret docker registry secret
+bash 'create_docker_registry_secret' do
+  user node['kube-hops']['user']
+  group node['kube-hops']['group']
+  environment ({ 'HOME' => ::Dir.home(node['kube-hops']['user']) })
+  retries 6
+  retry_delay 30
+  code <<-EOH
+      kubectl create secret docker-registry regcred --docker-server=docker.hops.works --docker-username=#{node['install']['enterprise']['username']} \
+       --docker-password=#{node['install']['enterprise']['password']} --docker-email=gibson@hopsworks.ai --namespace=#{node['kube-hops']['helm']['install_namespace']}
+  EOH
+end
+
+directory "#{node['kube-hops']['helm']['base_dir']}" do
+  owner node['kube-hops']['user']
+  group node['kube-hops']['group']
+  mode '0700'
+  action :create
+end
+
+remote_directory "#{node['kube-hops']['helm']['base_dir']}/helm/rss" do
+  source "helm/rss"
+  user node['kube-hops']['user']
+  group node['kube-hops']['group']
+  mode 0700
+end
+
+# install rss
+bash 'install_rss' do
+  user node['kube-hops']['user']
+  group node['kube-hops']['group']
+  environment ({ 'HOME' => ::Dir.home(node['kube-hops']['user']) })
+  retries 6
+  retry_delay 30
+  code <<-EOH
+      cd #{node['kube-hops']['helm']['base_dir']}/helm/rss && helm install hopsworks-release --debug . --namespace #{node['kube-hops']['helm']['install_namespace']} --values values.yaml
+  EOH
+end
+
+
+
+

@@ -146,3 +146,9 @@ if node.attribute?('hopsworks')
 end
 
 node.override['kube-hops']['pki']['ca_api'] = "#{hopsworks_ip}:#{hopsworks_https_port}"
+
+directory node['kube-hops']['rss']['dir'] do
+  owner 'root'
+  group 'root'
+  mode "777"
+end
