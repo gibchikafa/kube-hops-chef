@@ -174,7 +174,7 @@ bash "install_spark_operator" do
   environment ({ 'HOME' => ::Dir.home(node['kube-hops']['user']) })
   code <<-EOH
     helm repo add spark-operator https://kubeflow.github.io/spark-operator
-    helm install spark-operator spark-operator/spark-operator --namespace spark-operator --create-namespace --set enableWebhook=true
+    helm install spark-operator spark-operator/spark-operator --namespace spark-operator --create-namespace --set webhook.enable=true
   EOH
 end
 
