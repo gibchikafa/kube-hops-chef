@@ -212,7 +212,7 @@ directory "#{node['kube-hops']['helm']['base_dir']}" do
   action :create
 end
 
-remote_directory "#{node['kube-hops']['helm']['base_dir']}/helm/rss" do
+remote_directory "#{node['kube-hops']['helm']['base_dir']}/rss" do
   source "helm/rss"
   user node['kube-hops']['user']
   group node['kube-hops']['group']
@@ -227,7 +227,7 @@ bash 'install_rss' do
   retries 6
   retry_delay 30
   code <<-EOH
-      cd #{node['kube-hops']['helm']['base_dir']}/helm/rss && helm install hopsworks-release --debug . --namespace #{node['kube-hops']['helm']['install_namespace']} --values values.yaml
+      cd #{node['kube-hops']['helm']['base_dir']}/rss && helm install hopsworks-release --debug . --namespace #{node['kube-hops']['helm']['install_namespace']} --values values.yaml
   EOH
 end
 
